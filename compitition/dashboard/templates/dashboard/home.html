@@ -1,0 +1,63 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="grid-4 stats-grid">
+    <div class="card stat-card">
+        <div class="stat-title">设备健康</div>
+        <div class="stat-value">{{ health_score }}（{{ health_status }}）</div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-title">当前告警</div>
+        <div class="stat-value">{{ current_alarm_count }} 条（严重0）</div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-title">今日预警</div>
+        <div class="stat-value">{{ today_alarm_count }} 条</div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-title">在线设备</div>
+        <div class="stat-value">{{ online_devices }}</div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <h3 class="card-title">设备列表（可切换）</h3>
+        <div class="device-list">
+            {% for device in device_list %}
+            <label class="device-row">
+                <input type="checkbox" {% if device.checked %}checked{% endif %}>
+                <span class="device-name">{{ device.name }}</span>
+                <span class="device-score">{{ device.score }}</span>
+                <span class="device-status {{ device.status }}">{{ device.status }}</span>
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 class="card-title">实时波形 / PRPD 趋势</h3>
+        <div id="homeTrendChart" class="chart-box"></div>
+        <div class="small-record-list">
+            {% for record in latest_wave_records %}
+            <div class="small-record">{{ record }}</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="card full-width">
+    <h3 class="card-title">最新告警滚动条</h3>
+    <div class="alarm-list">
+        {% for alarm in latest_alarms %}
+        <div class="alarm-item">{{ alarm }}</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    renderHomeTrendChart('homeTrendChart');
+</script>
+{% endblock %}

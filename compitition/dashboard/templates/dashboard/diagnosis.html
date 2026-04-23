@@ -1,0 +1,64 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="page-header">
+    <h2>智能诊断</h2>
+    <button id="runDiagnosisBtn" class="primary-btn" style="float: right;">运行诊断模型</button>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <h3 class="card-title">PRPD 图谱输入</h3>
+        <div class="desc-text">原始 PRPD 相位-幅值图</div>
+        <div id="prpdInputChart" class="chart-box large-chart"></div>
+        <div class="meta-text">相位分辨率：360点</div>
+        <div class="meta-text">幅值范围：0-100mV</div>
+    </div>
+
+    <div class="card">
+        <h3 class="card-title">深度学习识别结果</h3>
+        <div class="result-line">放电类型：<strong>{{ discharge_type }}</strong></div>
+        <div class="result-line">置信度：<strong>{{ confidence }}%</strong></div>
+        <div class="result-line">严重程度：<strong>{{ severity }}</strong></div>
+        <div id="probabilityChart" class="chart-box"></div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <h3 class="card-title">模型特征重要性分析</h3>
+        <div class="feature-bars">
+            {% for item in feature_importance %}
+            <div class="feature-item">
+                <div class="feature-label">{{ item.name }}</div>
+                <div class="feature-progress">
+                    <div class="feature-fill" style="width: {{ item.value }}%;"></div>
+                </div>
+                <div class="feature-value">{{ item.value }}%</div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="analysis-text">
+            模型重点关注注 90°-120° 相位区间间歇脉冲组异常，该特征与金属颗粒放电器相关。
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 class="card-title">相似案例检索</h3>
+        <div class="desc-text">历史相似故障案例：</div>
+        <div class="case-list">
+            {% for case in similar_cases %}
+            <div class="case-item">{{ case }}</div>
+            {% endfor %}
+        </div>
+        <button class="primary-btn">查看全部历史案例</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    renderPRPDInputChart('prpdInputChart');
+    renderProbabilityChart('probabilityChart');
+</script>
+{% endblock %}

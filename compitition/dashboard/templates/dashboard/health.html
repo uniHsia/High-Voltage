@@ -1,0 +1,52 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="breadcrumb-row">
+    <div>当前位置：健康评估 &gt; {{ device_name }}</div>
+    <div>
+        <button id="runHealthBtn" class="primary-btn" style="margin-right: 10px;">运行健康评估模型</button>
+        <a href="{% url 'home' %}" class="back-link">返回总览</a>
+    </div>
+</div>
+
+<div class="card">
+    <h3 class="card-title center-title">健康指数（HI）仪表盘</h3>
+    <div class="health-top-layout">
+        <div id="gaugeChart" class="gauge-chart"></div>
+        <div class="health-meta">
+            <div class="meta-big-line">状态：{{ status }}</div>
+            <div class="meta-big-line">阈值：{{ threshold }}（注意）</div>
+            <div class="meta-small-line">范围：0-100</div>
+            <div class="meta-small-line">绿色区域</div>
+        </div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <h3 class="card-title">多指标融合趋势</h3>
+        <div id="fusionTrendChart" class="chart-box"></div>
+    </div>
+
+    <div class="card">
+        <h3 class="card-title">异常检测得分历史趋势图</h3>
+        <div id="anomalyTrendChart" class="chart-box"></div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 class="card-title center-title">剩余使用寿命（RUL）预测</h3>
+    <div class="rul-summary">预测值：<strong>{{ rul_days }} 天</strong>（约 {{ rul_months }} 个月）</div>
+    <div id="rulChart" class="chart-box large-chart"></div>
+    <div class="footer-meta">模型：{{ model_name }} ｜ 最新预测时间：{{ predict_time }}</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    renderGaugeChart('gaugeChart', {{ hi_score }});
+    renderFusionTrendChart('fusionTrendChart');
+    renderAnomalyTrendChart('anomalyTrendChart');
+    renderRULChart('rulChart');
+</script>
+{% endblock %}

@@ -1,0 +1,176 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="grid-4 stats-grid">
+    <div class="card stat-card">
+        <div class="stat-title">设备健康</div>
+        <div class="stat-value" id="healthScoreDisplay">{{ health_score }}（{{ health_status }}）</div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-title">当前告警</div>
+        <div class="stat-value">{{ current_alarm_count }} 条（严重0）</div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-title">今日预警</div>
+        <div class="stat-value">{{ today_alarm_count }} 条</div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-title">在线设备</div>
+        <div class="stat-value">{{ online_devices }}</div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <h3 class="card-title">设备列表（单选，点击切换）</h3>
+        <div class="device-list" id="deviceList">
+            {% for device in device_list %}
+            <div class="device-row device-item {% if device.checked %}active{% endif %}"
+                 data-name="{{ device.name }}"
+                 data-score="{{ device.score }}"
+                 data-status="{{ device.status }}"
+                 onclick="selectDevice(this)">
+                <span class="device-name">{{ device.name }}</span>
+                <span class="device-score">{{ device.score }}</span>
+                <span class="device-status {{ device.status }}">{{ device.status }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        <div style="margin-top: 10px; font-size: 14px; color: #666;">
+            当前选中：<span id="currentDeviceName" style="font-weight: bold; color: #1f7cff;">{{ device_list.0.name }}</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 class="card-title">实时波形 / PRPD 趋势</h3>
+        <div id="homeTrendChart" class="chart-box"></div>
+        <div class="small-record-list">
+            {% for record in latest_wave_records %}
+            <div class="small-record">{{ record }}</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="card full-width">
+    <h3 class="card-title">最新告警滚动条</h3>
+    <div class="alarm-list">
+        {% for alarm in latest_alarms %}
+        <div class="alarm-item">{{ alarm }}</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 设备选择函数
+    function selectDevice(element) {
+        var deviceName = element.getAttribute('data-name');
+        var deviceScore = element.getAttribute('data-score');
+        var deviceStatus = element.getAttribute('data-status');
+
+        // 移除其他设备的选中状态
+        var allDevices = document.querySelectorAll('.device-item');
+        allDevices.forEach(function(device) {
+            device.classList.remove('active');
+        });
+
+        // 添加选中状态
+        element.classList.add('active');
+
+        // 更新当前选中设备显示
+        document.getElementById('currentDeviceName').textContent = deviceName;
+
+        // 保存到sessionStorage
+        sessionStorage.setItem('selectedDevice', deviceName);
+
+        // 更新健康评分显示
+        var statusText = deviceStatus === '正常' ? '良好' :
+                         deviceStatus === '注意' ? '注意' :
+                         deviceStatus === '警告' ? '警告' : '严重';
+        document.getElementById('healthScoreDisplay').textContent = deviceScore + '（' + statusText + '）';
+
+        // 可选：发送到服务器保存
+        fetch('/api/select-device/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: 'device_name=' + encodeURIComponent(deviceName)
+        });
+
+        console.log('已切换到设备:', deviceName);
+    }
+
+    // 页面加载时恢复之前选中的设备
+    function restoreSelectedDevice() {
+        var savedDevice = sessionStorage.getItem('selectedDevice');
+        if (savedDevice) {
+            var deviceElement = document.querySelector('.device-item[data-name="' + savedDevice + '"]');
+            if (deviceElement) {
+                // 移除默认选中状态
+                document.querySelectorAll('.device-item').forEach(function(device) {
+                    device.classList.remove('active');
+                });
+                // 恢复保存的选中状态
+                deviceElement.classList.add('active');
+                document.getElementById('currentDeviceName').textContent = savedDevice;
+                console.log('已恢复选中的设备:', savedDevice);
+            }
+        }
+    }
+
+    // 初始化页面
+    function initHomePage() {
+        console.log('初始化首页...');
+
+        if (typeof echarts === 'undefined') {
+            console.error('ECharts未加载，等待重试...');
+            setTimeout(initHomePage, 100);
+            return;
+        }
+
+        // 恢复之前选中的设备
+        restoreSelectedDevice();
+
+        try {
+            var chart = echarts.init(document.getElementById('homeTrendChart'));
+            var option = {
+                tooltip: { trigger: 'axis' },
+                xAxis: {
+                    type: 'category',
+                    data: ['13:00', '13:10', '13:20', '13:30', '13:40', '13:50', '14:00', '14:10', '14:20']
+                },
+                yAxis: { type: 'value' },
+                series: [{
+                    data: [20, 35, 28, 42, 30, 55, 38, 48, 62],
+                    type: 'line',
+                    smooth: true,
+                    areaStyle: {}
+                }]
+            };
+            chart.setOption(option);
+            console.log('✅ 首页趋势图初始化成功');
+        } catch (e) {
+            console.error('❌ 首页趋势图初始化失败:', e);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initHomePage);
+    } else {
+        initHomePage();
+    }
+
+    window.addEventListener('resize', function() {
+        if (typeof echarts !== 'undefined') {
+            var charts = echarts.getInstancesByDom();
+            charts.forEach(function(chart) {
+                chart.resize();
+            });
+        }
+    });
+</script>
+{% endblock %}

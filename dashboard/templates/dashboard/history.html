@@ -1,0 +1,298 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="card filter-card">
+    <div class="filter-grid">
+        <div class="filter-left">
+            <div class="filter-title">筛选条件：</div>
+            <div class="form-row">
+                <label>设备：</label>
+                <select id="deviceSelect">
+                    <option value="GIS-01" {% if selected_device == 'GIS-01' %}selected{% endif %}>GIS-01</option>
+                    <option value="GIS-02" {% if selected_device == 'GIS-02' %}selected{% endif %}>GIS-02</option>
+                    <option value="变压器-01" {% if selected_device == '变压器-01' %}selected{% endif %}>变压器-01</option>
+                    <option value="电缆-01" {% if selected_device == '电缆-01' %}selected{% endif %}>电缆-01</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label>数据类型：</label>
+                <select id="dataTypeSelect">
+                    <option value="全部" {% if data_type == '全部' %}selected{% endif %}>全部</option>
+                    <option value="局放" {% if data_type == '局放' %}selected{% endif %}>局放</option>
+                    <option value="温度" {% if data_type == '温度' %}selected{% endif %}>温度</option>
+                    <option value="HI" {% if data_type == 'HI' %}selected{% endif %}>HI</option>
+                    <option value="RUL" {% if data_type == 'RUL' %}selected{% endif %}>RUL</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="filter-right">
+            <div class="form-row">
+                <label>时间范围：</label>
+                <input type="date" id="startDate" value="{{ start_date }}">
+                <span>至</span>
+                <input type="date" id="endDate" value="{{ end_date }}">
+            </div>
+            <div class="btn-row">
+                <button type="button" id="queryBtn" class="primary-btn">查询</button>
+                <button type="button" id="resetBtn" class="secondary-btn">重置</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 class="card-title">历史趋势对比图</h3>
+    <div class="desc-text">[HI指数 / 局放幅值 / 温度 / RUL预测值]</div>
+    <div class="desc-text">支持多指标叠加、时间缩放</div>
+    <div id="historyTrendChart" class="chart-box large-chart"></div>
+</div>
+
+<div class="card">
+    <h3 class="card-title">历史诊断记录</h3>
+    <div class="table-wrap">
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>时间</th>
+                    <th>放电类型</th>
+                    <th>置信度</th>
+                    <th>HI</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="recordsTableBody">
+                {% for item in records %}
+                <tr>
+                    <td>{{ item.time }}</td>
+                    <td>{{ item.type }}</td>
+                    <td>{{ item.confidence }}</td>
+                    <td>{{ item.hi }}</td>
+                    <td><a href="#" class="table-link">{{ item.action }}</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+        <div class="report-bar">
+            <form method="get" action="{% url 'report_preview' %}" style="display:inline-flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                <button type="submit" class="primary-btn">生成报告</button>
+            </form>
+
+            <form method="get" action="{% url 'report_export' %}" style="display:inline-flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                <span>报告格式：</span>
+                <select name="format">
+                    <option value="pdf">PDF</option>
+                    <option value="docx">Word</option>
+                </select>
+                <button type="submit" class="secondary-btn">导出</button>
+            </form>
+        </div>
+
+        {% if report_preview_text %}
+        <div class="card" style="margin-top: 20px;">
+            <h3 class="card-title">报告预览</h3>
+            <pre style="white-space: pre-wrap; font-family: Microsoft YaHei, sans-serif; line-height: 1.8; color: #2d5278;">{{ report_preview_text }}</pre>
+        </div>
+        {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    var historyChart = null;
+
+    // 根据筛选条件生成模拟数据
+    function generateHistoryData(device, dataType, startDate, endDate) {
+        // 模拟不同设备的数据差异
+        var deviceMultiplier = {
+            'GIS-01': 1.0,
+            'GIS-02': 0.8,
+            '变压器-01': 0.9,
+            '电缆-01': 1.1
+        };
+
+        var mult = deviceMultiplier[device] || 1.0;
+
+        // 生成时间标签
+        var dates = [];
+        var start = new Date(startDate);
+        var end = new Date(endDate);
+        var current = new Date(start);
+        while (current <= end) {
+            var month = (current.getMonth() + 1).toString().padStart(2, '0');
+            var day = current.getDate().toString().padStart(2, '0');
+            dates.push(month + '-' + day);
+            current.setDate(current.getDate() + 5); // 每5天一个点
+        }
+
+        // 根据数据类型生成不同的数据
+        var baseHi = [90, 91, 92, 90, 89, 88, 87, 89, 91, 92];
+        var basePd = [22, 28, 30, 35, 32, 40, 38, 36, 34, 30];
+        var baseTemp = [48, 50, 49, 52, 54, 53, 51, 50, 49, 48];
+        var baseRul = [210, 205, 201, 196, 192, 188, 186, 184, 188, 190];
+
+        // 调整数据范围
+        var hiData = baseHi.map(function(v) { return Math.round((v + (Math.random() - 0.5) * 5) * mult * 10) / 10; });
+        var pdData = basePd.map(function(v) { return Math.round((v + (Math.random() - 0.5) * 10) / mult * 10) / 10; });
+        var tempData = baseTemp.map(function(v) { return Math.round((v + (Math.random() - 0.5) * 3) * 10) / 10; });
+        var rulData = baseRul.map(function(v) { return Math.round((v + (Math.random() - 0.5) * 10) * mult); });
+
+        // 生成历史记录
+        var records = [];
+        for (var i = 0; i < dates.length; i++) {
+            var recordDate = dates[i];
+            var types = ['金属颗粒', '悬浮放电', '沿面放电', '气隙放电', '正常'];
+            var type = types[Math.floor(Math.random() * types.length)];
+            records.push({
+                time: '2025-' + recordDate + ' 10:23',
+                type: type,
+                confidence: (85 + Math.random() * 10).toFixed(1) + '%',
+                hi: hiData[i] + '%'
+            });
+        }
+
+        return {
+            dates: dates,
+            hiData: hiData,
+            pdData: pdData,
+            tempData: tempData,
+            rulData: rulData,
+            records: records
+        };
+    }
+
+    // 更新图表和数据
+    function updateHistoryData() {
+        var device = document.getElementById('deviceSelect').value;
+        var dataType = document.getElementById('dataTypeSelect').value;
+        var startDate = document.getElementById('startDate').value;
+        var endDate = document.getElementById('endDate').value;
+
+        console.log('查询条件:', device, dataType, startDate, '至', endDate);
+
+        // 生成新数据
+        var data = generateHistoryData(device, dataType, startDate, endDate);
+
+        // 更新图表
+        if (historyChart) {
+            var series = [];
+            if (dataType === '全部' || dataType === 'HI') {
+                series.push({ name: 'HI指数', type: 'line', smooth: true, data: data.hiData });
+            }
+            if (dataType === '全部' || dataType === '局放') {
+                series.push({ name: '局放幅值', type: 'line', smooth: true, data: data.pdData });
+            }
+            if (dataType === '全部' || dataType === '温度') {
+                series.push({ name: '温度', type: 'line', smooth: true, data: data.tempData });
+            }
+            if (dataType === '全部' || dataType === 'RUL') {
+                series.push({ name: 'RUL预测值', type: 'line', smooth: true, data: data.rulData });
+            }
+
+            historyChart.setOption({
+                xAxis: {
+                    data: data.dates
+                },
+                series: series
+            });
+        }
+
+        // 更新历史记录表格
+        var tbody = document.getElementById('recordsTableBody');
+        if (tbody) {
+            tbody.innerHTML = data.records.map(function(record) {
+                return '<tr>' +
+                    '<td>' + record.time + '</td>' +
+                    '<td>' + record.type + '</td>' +
+                    '<td>' + record.confidence + '</td>' +
+                    '<td>' + record.hi + '</td>' +
+                    '<td><a href="#" class="table-link">查看</a></td>' +
+                    '</tr>';
+            }).join('');
+        }
+
+        console.log('✅ 历史数据更新完成');
+    }
+
+    // 初始化页面
+    function initHistoryPage() {
+        console.log('初始化历史追溯页面...');
+
+        if (typeof echarts === 'undefined') {
+            console.error('ECharts未加载，等待重试...');
+            setTimeout(initHistoryPage, 100);
+            return;
+        }
+
+        // 初始化图表
+        try {
+            historyChart = echarts.init(document.getElementById('historyTrendChart'));
+
+            var initialData = generateHistoryData(
+                document.getElementById('deviceSelect').value,
+                document.getElementById('dataTypeSelect').value,
+                document.getElementById('startDate').value,
+                document.getElementById('endDate').value
+            );
+
+            var option = {
+                tooltip: { trigger: 'axis' },
+                legend: { data: ['HI指数', '局放幅值', '温度', 'RUL预测值'] },
+                xAxis: {
+                    type: 'category',
+                    data: initialData.dates
+                },
+                yAxis: { type: 'value' },
+                series: [
+                    { name: 'HI指数', type: 'line', smooth: true, data: initialData.hiData },
+                    { name: '局放幅值', type: 'line', smooth: true, data: initialData.pdData },
+                    { name: '温度', type: 'line', smooth: true, data: initialData.tempData },
+                    { name: 'RUL预测值', type: 'line', smooth: true, data: initialData.rulData }
+                ]
+            };
+            historyChart.setOption(option);
+            console.log('✅ 历史趋势图初始化成功');
+        } catch (e) {
+            console.error('❌ 历史趋势图初始化失败:', e);
+        }
+
+        // 绑定查询按钮
+        var queryBtn = document.getElementById('queryBtn');
+        if (queryBtn) {
+            queryBtn.addEventListener('click', function() {
+                console.log('点击了查询按钮');
+                updateHistoryData();
+            });
+            console.log('✅ 查询按钮事件绑定成功');
+        }
+
+        // 绑定重置按钮
+        var resetBtn = document.getElementById('resetBtn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function() {
+                console.log('点击了重置按钮');
+                document.getElementById('deviceSelect').value = 'GIS-01';
+                document.getElementById('dataTypeSelect').value = '全部';
+                document.getElementById('startDate').value = '2025-05-01';
+                document.getElementById('endDate').value = '2025-06-01';
+                updateHistoryData();
+            });
+            console.log('✅ 重置按钮事件绑定成功');
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initHistoryPage);
+    } else {
+        initHistoryPage();
+    }
+
+    window.addEventListener('resize', function() {
+        if (historyChart) {
+            historyChart.resize();
+        }
+    });
+</script>
+{% endblock %}

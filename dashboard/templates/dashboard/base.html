@@ -1,0 +1,73 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} - 高电压设备智能健康管理一体化平台</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <!-- 先加载ECharts库 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <script>
+        // 检查ECharts是否加载成功
+        window.addEventListener('load', function() {
+            if (typeof echarts === 'undefined') {
+                console.error('ECharts库加载失败！');
+                alert('ECharts库加载失败，请检查网络连接或刷新页面重试。');
+            } else {
+                console.log('ECharts库加载成功，版本:', echarts.version);
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <a href="{% url 'home' %}" class="nav-item {% if '/home/' in request.path %}active{% endif %}">首页</a>
+                <a href="{% url 'diagnosis' %}" class="nav-item {% if '/diagnosis/' in request.path %}active{% endif %}">智能诊断</a>
+                <a href="{% url 'health' %}" class="nav-item {% if '/health/' in request.path %}active{% endif %}">健康评估</a>
+                <a href="{% url 'history' %}" class="nav-item {% if '/history/' in request.path %}active{% endif %}">历史追溯</a>
+                <a href="{% url 'debug_page' %}" class="nav-item {% if '/debug/' in request.path %}active{% endif %}" style="background: rgba(255, 200, 0, 0.3);">🔧 调试</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div class="platform-title">高电压设备智能健康管理一体化平台</div>
+                <div class="user-info">
+                    用户：{{ request.session.username|default:"admin" }}
+                    <a href="{% url 'logout' %}" class="logout-btn">退出登录</a>
+                </div>
+            </header>
+
+            {% if messages %}
+            <div class="message-wrapper">
+                {% for message in messages %}
+                <div class="message-item {{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <section class="content-area">
+                {% block content %}{% endblock %}
+            </section>
+        </main>
+    </div>
+
+    <!-- 不再加载charts.js，所有JavaScript都在各页面内联 -->
+    <script>
+        // 全局错误处理
+        window.addEventListener('error', function(event) {
+            console.error('全局错误:', event.error);
+        });
+
+        // 确保所有资源加载完成
+        window.addEventListener('load', function() {
+            console.log('页面所有资源加载完成');
+            console.log('ECharts可用性:', typeof echarts !== 'undefined');
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

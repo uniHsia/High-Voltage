@@ -1,0 +1,289 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="breadcrumb-row">
+    <div>当前位置：健康评估 &gt; <span id="deviceName">{{ device_name }}</span></div>
+    <div>
+        <button id="runHealthBtn" class="primary-btn" style="margin-right: 10px;">运行健康评估模型</button>
+        <a href="{% url 'home' %}" class="back-link">返回总览</a>
+    </div>
+</div>
+
+<div class="card">
+    <h3 class="card-title center-title">健康指数（HI）仪表盘</h3>
+    <div class="health-top-layout">
+        <div id="gaugeChart" class="gauge-chart"></div>
+        <div class="health-meta" id="healthMeta">
+            <div class="meta-big-line">状态：<span id="healthStatus">{{ status }}</span></div>
+            <div class="meta-big-line">阈值：<span id="healthThreshold">{{ threshold }}</span>（注意）</div>
+            <div class="meta-small-line">范围：0-100</div>
+            <div class="meta-small-line">绿色区域</div>
+        </div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <h3 class="card-title">多指标融合趋势</h3>
+        <div id="fusionTrendChart" class="chart-box"></div>
+    </div>
+
+    <div class="card">
+        <h3 class="card-title">异常检测得分历史趋势图</h3>
+        <div id="anomalyTrendChart" class="chart-box"></div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 class="card-title center-title">剩余使用寿命（RUL）预测</h3>
+    <div class="rul-summary">预测值：<strong id="rulDays">{{ rul_days }} 天</strong>（约 <span id="rulMonths">{{ rul_months }}</span> 个月）</div>
+    <div id="rulChart" class="chart-box large-chart"></div>
+    <div class="footer-meta">模型：<span id="modelName">{{ model_name }}</span> ｜ 最新预测时间：<span id="predictTime">{{ predict_time }}</span></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 等待页面完全加载后再初始化
+    function initHealthPage() {
+        console.log('初始化健康评估页面...');
+
+        var hiScore = {{ hi_score }};
+
+        // 检查必要的库
+        if (typeof echarts === 'undefined') {
+            console.error('ECharts未加载，等待重试...');
+            setTimeout(initHealthPage, 100);
+            return;
+        }
+
+        // 初始化HI仪表盘
+        try {
+            var gaugeChart = echarts.init(document.getElementById('gaugeChart'));
+            var gaugeOption = {
+                series: [{
+                    type: 'gauge',
+                    startAngle: 200,
+                    endAngle: -20,
+                    min: 0,
+                    max: 100,
+                    progress: { show: true, width: 18 },
+                    axisLine: { lineStyle: { width: 18 } },
+                    pointer: { show: true },
+                    detail: {
+                        valueAnimation: true,
+                        formatter: '{value}',
+                        fontSize: 30,
+                        offsetCenter: [0, '45%']
+                    },
+                    data: [{ value: hiScore }]
+                }]
+            };
+            gaugeChart.setOption(gaugeOption);
+            console.log('HI仪表盘初始化成功');
+        } catch (e) {
+            console.error('HI仪表盘初始化失败:', e);
+        }
+
+        // 初始化多指标融合趋势图
+        try {
+            var fusionChart = echarts.init(document.getElementById('fusionTrendChart'));
+            var fusionOption = {
+                tooltip: { trigger: 'axis' },
+                legend: { data: ['局放', '温度', '电流振动'] },
+                xAxis: {
+                    type: 'category',
+                    data: ['1', '50', '100', '150', '200', '250', '300', '350', '400', '450', '500', '550', '600']
+                },
+                yAxis: { type: 'value' },
+                series: [
+                    { name: '局放', type: 'line', smooth: true, data: [15, 20, 35, 25, 28, 32, 22, 26, 38, 30, 24, 29, 31] },
+                    { name: '温度', type: 'line', smooth: true, data: [22, 24, 30, 29, 26, 31, 28, 30, 33, 27, 25, 31, 29] },
+                    { name: '电流振动', type: 'line', smooth: true, data: [30, 18, 48, 36, 21, 44, 29, 19, 50, 31, 23, 47, 35] }
+                ]
+            };
+            fusionChart.setOption(fusionOption);
+            console.log('多指标融合趋势图初始化成功');
+        } catch (e) {
+            console.error('多指标融合趋势图初始化失败:', e);
+        }
+
+        // 初始化异常检测趋势图
+        try {
+            var anomalyChart = echarts.init(document.getElementById('anomalyTrendChart'));
+            var anomalyOption = {
+                tooltip: { trigger: 'axis' },
+                xAxis: {
+                    type: 'category',
+                    data: ['0', '20', '40', '60', '80', '100', '120']
+                },
+                yAxis: { type: 'value' },
+                series: [{
+                    type: 'line',
+                    smooth: true,
+                    areaStyle: {},
+                    data: [15, 40, 92, 38, 30, 26, 24]
+                }]
+            };
+            anomalyChart.setOption(anomalyOption);
+            console.log('异常检测趋势图初始化成功');
+        } catch (e) {
+            console.error('异常检测趋势图初始化失败:', e);
+        }
+
+        // 初始化RUL预测图
+        try {
+            var rulChart = echarts.init(document.getElementById('rulChart'));
+            var rulOption = {
+                tooltip: { trigger: 'axis' },
+                legend: { data: ['实际值', '预测值', '置信区间上界', '置信区间下界'] },
+                xAxis: {
+                    type: 'category',
+                    data: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
+                },
+                yAxis: { type: 'value' },
+                series: [
+                    { name: '实际值', type: 'line', data: [220, 214, 208, 199, 193, 188, 181, 176, 170, 164] },
+                    { name: '预测值', type: 'line', smooth: true, data: [222, 216, 209, 202, 196, 189, 184, 178, 172, 166] },
+                    { name: '置信区间上界', type: 'line', lineStyle: { opacity: 0 }, stack: 'confidence', data: [10, 11, 10, 12, 9, 10, 11, 10, 9, 8] },
+                    { name: '置信区间下界', type: 'line', lineStyle: { opacity: 0 }, areaStyle: {}, stack: 'confidence', data: [18, 16, 15, 17, 14, 15, 13, 12, 11, 10] }
+                ]
+            };
+            rulChart.setOption(rulOption);
+            console.log('RUL预测图初始化成功');
+        } catch (e) {
+            console.error('RUL预测图初始化失败:', e);
+        }
+
+        // 绑定运行健康评估按钮
+        var runBtn = document.getElementById('runHealthBtn');
+        if (runBtn) {
+            runBtn.addEventListener('click', function() {
+                console.log('点击了运行健康评估按钮');
+                runBtn.disabled = true;
+                runBtn.textContent = '评估运行中...';
+
+                // 显示加载提示
+                var loadingDiv = document.createElement('div');
+                loadingDiv.id = 'loadingOverlay';
+                loadingDiv.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 9999;';
+                loadingDiv.innerHTML = '<div style="background: white; padding: 30px; border-radius: 10px; text-align: center;"><p style="font-size: 16px; color: #333;">正在运行健康评估模型，请稍候（预计1-2分钟）...</p></div>';
+                document.body.appendChild(loadingDiv);
+
+                fetch('/api/run-health/', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(function(data) {
+                    console.log('健康评估结果:', data);
+                    document.body.removeChild(loadingDiv);
+
+                    if (data.error) {
+                        alert('健康评估出错: ' + data.error);
+                    } else {
+                        // 更新设备名称
+                        if (data.device_name) {
+                            document.getElementById('deviceName').textContent = data.device_name;
+                        }
+
+                        // 更新HI仪表盘
+                        if (data.hi_score) {
+                            gaugeChart.setOption({
+                                series: [{ data: [{ value: data.hi_score }] }]
+                            });
+                        }
+
+                        // 更新健康状态
+                        if (data.status) {
+                            document.getElementById('healthStatus').textContent = data.status;
+                        }
+                        if (data.threshold) {
+                            document.getElementById('healthThreshold').textContent = data.threshold;
+                        }
+
+                        // 更新RUL
+                        if (data.rul_days) {
+                            document.getElementById('rulDays').textContent = data.rul_days + ' 天';
+                        }
+                        if (data.rul_months) {
+                            document.getElementById('rulMonths').textContent = data.rul_months;
+                        }
+
+                        // 更新多指标融合趋势图
+                        if (data.fusion_trend) {
+                            fusionChart.setOption({
+                                xAxis: { data: data.fusion_trend.labels },
+                                series: data.fusion_trend.series.map(function(s) {
+                                    return { name: s.name, type: 'line', smooth: true, data: s.data };
+                                })
+                            });
+                        }
+
+                        // 更新异常检测趋势图
+                        if (data.anomaly_trend) {
+                            anomalyChart.setOption({
+                                xAxis: { data: data.anomaly_trend.labels },
+                                series: [{ data: data.anomaly_trend.values }]
+                            });
+                        }
+
+                        // 更新RUL预测图
+                        if (data.rul_prediction) {
+                            rulChart.setOption({
+                                xAxis: { data: data.rul_prediction.labels },
+                                series: [
+                                    { name: '实际值', data: data.rul_prediction.true_values },
+                                    { name: '预测值', data: data.rul_prediction.predicted_values },
+                                    { name: '置信区间上界', data: data.rul_prediction.confidence_upper },
+                                    { name: '置信区间下界', data: data.rul_prediction.confidence_lower }
+                                ]
+                            });
+                        }
+
+                        alert('健康评估完成！\n设备: ' + data.device_name +
+                              '\nHI指数: ' + data.hi_score +
+                              '\n状态: ' + data.status +
+                              '\nRUL预测: ' + data.rul_days + '天');
+                    }
+                })
+                .catch(function(error) {
+                    console.error('请求失败:', error);
+                    document.body.removeChild(loadingDiv);
+                    alert('请求失败: ' + error.message);
+                })
+                .finally(function() {
+                    runBtn.disabled = false;
+                    runBtn.textContent = '运行健康评估模型';
+                });
+            });
+            console.log('运行健康评估按钮事件绑定成功');
+        } else {
+            console.error('未找到运行健康评估按钮');
+        }
+    }
+
+    // 页面加载完成后初始化
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initHealthPage);
+    } else {
+        initHealthPage();
+    }
+
+    // 窗口调整大小时重新渲染图表
+    window.addEventListener('resize', function() {
+        if (typeof echarts !== 'undefined') {
+            var charts = echarts.getInstancesByDom();
+            charts.forEach(function(chart) {
+                chart.resize();
+            });
+        }
+    });
+</script>
+{% endblock %}

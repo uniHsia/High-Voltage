@@ -1,0 +1,22 @@
+[
+    {
+        "username": "Joe",
+        "email": "3237054155@qq.com",
+        "password": "91487c834651b3d3323a171bb77f2d2855c4bcb2b0e100fcb0a14f7ab4405de5"
+    },
+    {
+        "username": "qwh",
+        "email": "3237054155@qq.com",
+        "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    },
+    {
+        "username": "uniHsia",
+        "email": "2658597763@qq.com",
+        "password": "pbkdf2_sha256$870000$hCSvodq59VnjLjVKCO5PAa$R2ni6+S1KKmzwLVm0cDn/EAHRPL1noun03vB50cEEBw="
+    },
+    {
+        "username": "test_user_12345",
+        "email": "test@example.com",
+        "password": "pbkdf2_sha256$870000$5wI4sa30GqeB7T48oez9Yl$phUQmIyXKPkgFLhvQ79qEvmLmmLvXK5zk7FYXVNAhu0="
+    }
+]

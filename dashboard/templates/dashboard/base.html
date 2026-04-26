@@ -28,7 +28,6 @@
                 <a href="{% url 'diagnosis' %}" class="nav-item {% if '/diagnosis/' in request.path %}active{% endif %}">智能诊断</a>
                 <a href="{% url 'health' %}" class="nav-item {% if '/health/' in request.path %}active{% endif %}">健康评估</a>
                 <a href="{% url 'history' %}" class="nav-item {% if '/history/' in request.path %}active{% endif %}">历史追溯</a>
-                <a href="{% url 'debug_page' %}" class="nav-item {% if '/debug/' in request.path %}active{% endif %}" style="background: rgba(255, 200, 0, 0.3);">🔧 调试</a>
             </nav>
         </aside>
 

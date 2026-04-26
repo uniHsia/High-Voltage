@@ -164,23 +164,40 @@ a {
 .device-list {
     display: flex;
     flex-direction: column;
+    gap: 6px;
+}
+
+.device-list-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
     gap: 12px;
+    font-weight: bold;
+    color: #234a74;
+    padding: 6px 14px 8px;
+    border-bottom: 2px solid #cde4ff;
+    font-size: 17px;
 }
 
 .device-row {
     display: grid;
-    grid-template-columns: 28px 2fr 1fr 1fr;
+    grid-template-columns: 2fr 1fr 1fr;
     align-items: center;
     gap: 12px;
     font-size: 18px;
     color: #27486f;
-    padding: 10px 12px;
+    padding: 12px 14px;
     border-radius: 10px;
     transition: background-color 0.2s ease;
+    margin-bottom: 4px;
 }
 
 .device-row:hover {
     background-color: #f0f7ff;
+}
+
+.device-row.active {
+    background-color: #d4eaff;
+    border: 2px solid #1f7cff;
 }
 
 .device-name {
@@ -393,7 +410,7 @@ a {
 
 .gauge-chart {
     width: 420px;
-    height: 260px;
+    height: 320px;
 }
 
 .health-meta {

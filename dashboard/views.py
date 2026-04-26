@@ -477,8 +477,3 @@ def test_import(request):
 def test_page(request):
     """测试页面"""
     return render(request, 'dashboard/test_api.html')
-
-@login_required_custom
-def debug_page(request):
-    """调试页面 - 帮助排查问题"""
-    return render(request, 'dashboard/debug.html')

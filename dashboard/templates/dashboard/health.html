@@ -67,22 +67,46 @@
                     endAngle: -20,
                     min: 0,
                     max: 100,
-                    progress: { show: true, width: 18 },
-                    axisLine: { lineStyle: { width: 18 } },
-                    pointer: { show: true },
+                    radius: '90%',
+                    progress: { show: true, width: 20 },
+                    axisLine: { lineStyle: { width: 20, color: [[0.3, '#67e0e6'], [0.7, '#37a2da'], [1, '#fd666d']] } },
+                    axisTick: {
+                        distance: -25,
+                        length: 8,
+                        lineStyle: { color: '#fff', width: 2 }
+                    },
+                    axisLabel: {
+                        distance: -40,
+                        color: '#999',
+                        fontSize: 14,
+                        formatter: '{value}'
+                    },
+                    splitLine: {
+                        distance: -30,
+                        length: 14,
+                        lineStyle: { color: '#fff', width: 3 }
+                    },
+                    pointer: {
+                        show: true,
+                        length: '70%',
+                        width: 6,
+                        itemStyle: { color: 'auto' }
+                    },
                     detail: {
                         valueAnimation: true,
                         formatter: '{value}',
-                        fontSize: 30,
-                        offsetCenter: [0, '45%']
+                        fontSize: 32,
+                        fontWeight: 'bold',
+                        offsetCenter: [0, '50%'],
+                        color: '#333'
                     },
                     data: [{ value: hiScore }]
                 }]
             };
             gaugeChart.setOption(gaugeOption);
-            console.log('HI仪表盘初始化成功');
+            console.log('✅ HI仪表盘初始化成功');
         } catch (e) {
-            console.error('HI仪表盘初始化失败:', e);
+            console.error('❌ HI仪表盘初始化失败:', e);
         }
 
         // 初始化多指标融合趋势图

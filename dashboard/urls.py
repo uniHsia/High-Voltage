@@ -17,5 +17,4 @@ urlpatterns = [
     path('api/select-device/', views.select_device, name='select_device'),
     path('api/get-device-data/', views.get_device_data, name='get_device_data'),
     path('test-page/', views.test_page, name='test_page'),
-    path('debug/', views.debug_page, name='debug_page'),
 ]

@@ -24,6 +24,11 @@
     <div class="card">
         <h3 class="card-title">设备列表（单选，点击切换）</h3>
         <div class="device-list" id="deviceList">
+            <div class="device-list-header">
+                <span>设备名称</span>
+                <span>健康评分</span>
+                <span>状态</span>
+            </div>
             {% for device in device_list %}
             <div class="device-row device-item {% if device.checked %}active{% endif %}"
                  data-name="{{ device.name }}"
